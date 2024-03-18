@@ -157,8 +157,8 @@ if (uploaded_file is not None):
                 st.subheader(f':green[{xhrcount}]')
             with col8:
                 st.header("fetch")
-                typeCountsDict = results["type_counts_dict"]
-                fetchcount = typeCountsDict['fetch']
+                typeCountsDict = results.get("type_counts_dict", {})  # Use get() method with a default value of empty dictionary
+                fetchcount = typeCountsDict.get('fetch', 0)  # Use get() method again to fetch the value with a default of 0
                 st.subheader(f':green[{fetchcount}]')
 
             col9 ,col10 ,col11, col12 = st.columns(4)
@@ -196,8 +196,8 @@ if (uploaded_file is not None):
             
             with col14:
                 st.header("websocket")
-                typeCountsDict = results["type_counts_dict"]
-                websocketcount = typeCountsDict['websocket']
+                typeCountsDict = results.get("type_counts_dict", {})  # Use get() method with a default value of empty dictionary
+                websocketcount = typeCountsDict.get('websocket', 0)  # Use get() method again to fetch the value with a default of 0
                 st.subheader(f':green[{websocketcount}]')
             
             with col15:
