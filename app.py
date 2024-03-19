@@ -284,3 +284,14 @@ if (uploaded_file is not None):
                 duration_max = timings_data['duration_max']
                 st.subheader(f':red[{duration_max}] ms')    
 
+
+            # Calculate interval sum
+            interval_sum_micro, interval_sum_seconds = calculate.calculate_interval_sum(dat_clean)    
+            st.subheader(f"First time loading chart takes : :red[{interval_sum_micro} ms] OR :blue[{interval_sum_seconds} sec]")
+
+            # Display the maximum duration row
+            st.subheader("Row with Maximum Duration: ")
+            st.dataframe(calculate.find_max_duration_row(filtered_newserviceapis_dataset))     
+
+        
+

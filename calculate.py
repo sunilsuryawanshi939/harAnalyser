@@ -142,6 +142,8 @@ def plot_horizontal_bar_chart(data, display_percentages=False, height=400):
 
 
 def calculate_timing_stats(df):
+
+
     """
     Calculate the minimum, average, and maximum of the 'ttfb' and 'duration' columns in the DataFrame.
 
@@ -176,3 +178,37 @@ def calculate_timing_stats(df):
     stats['duration_max'] = duration_max
 
     return stats
+
+
+
+def find_max_duration_row(http_df):
+    # Find row with maximum duration
+    max_duration_row = http_df.loc[http_df['duration'].idxmax()]
+    return max_duration_row
+
+
+def calculate_interval_sum(http_df):
+    # Convert 'duration' column to float
+    http_df['duration'] = http_df['duration'].astype(float)
+
+    # Initialize variables
+    interval_sum_micros = 0
+    interval_sum_seconds = 0
+    counting = False
+
+    # Iterate through the rows
+    for i, row in http_df.iterrows():
+        # Check if interval value changed from "N" to another value
+        if (row['interval'] != 'N' or row['isTradingViewData'] != 'N') and not counting:
+            counting = True  # Start summing if encounter first non-"N" interval
+            interval_sum_micros += row['duration']  # Include the current row's duration
+        elif (row['interval'] == 'N' and row['isTradingViewData'] == 'N') and counting:
+            counting = False  # Stop summing if encounter "N" after non-"N" interval
+        elif counting:
+            interval_sum_micros += row['duration']  # Include the current row's duration
+
+    # Convert sum from microseconds to seconds and round to 3 decimal places
+    interval_sum_seconds = round(interval_sum_micros / 1000, 3)
+    interval_sum_micros = round(interval_sum_micros, 3)
+
+    return interval_sum_micros, interval_sum_seconds
