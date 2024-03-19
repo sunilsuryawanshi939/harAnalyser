@@ -164,8 +164,8 @@ if (uploaded_file is not None):
             col9 ,col10 ,col11, col12 = st.columns(4)
             with col9:
                 st.header("Stylesheets")
-                typeCountsDict = results["type_counts_dict"]
-                stylesheetcount = typeCountsDict['stylesheet']
+                typeCountsDict = results.get("type_counts_dict", {})
+                stylesheetcount = typeCountsDict.get('stylesheet',0)
                 st.subheader(f':green[{stylesheetcount}]')
 
             with col10:
