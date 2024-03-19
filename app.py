@@ -152,8 +152,8 @@ if (uploaded_file is not None):
                 st.subheader(f':green[{results["count60newserviceapis"]}]')
             with col7:
                 st.header("xhr")
-                typeCountsDict = results["type_counts_dict"]
-                xhrcount = typeCountsDict['xhr']
+                typeCountsDict = results.get("type_counts_dict",{})
+                xhrcount = typeCountsDict.get('xhr',0)
                 st.subheader(f':green[{xhrcount}]')
             with col8:
                 st.header("fetch")
@@ -170,28 +170,28 @@ if (uploaded_file is not None):
 
             with col10:
                 st.header("Scripts")
-                typeCountsDict = results["type_counts_dict"]
-                scriptcount = typeCountsDict['script']
+                typeCountsDict = results.get("type_counts_dict",{})
+                scriptcount = typeCountsDict.get('script',0)
                 st.subheader(f':green[{scriptcount}]')  
 
             with col11:
                 st.header("Images")
-                typeCountsDict = results["type_counts_dict"]
-                imagecount = typeCountsDict['image']
+                typeCountsDict = results.get("type_counts_dict",{})
+                imagecount = typeCountsDict.get('image',0)
                 st.subheader(f':green[{imagecount}]')
             
             with col12:
                 st.header("ping")
-                typeCountsDict = results["type_counts_dict"]
-                pingcount = typeCountsDict['ping']
+                typeCountsDict = results.get("type_counts_dict",{})
+                pingcount = typeCountsDict.get('ping',0)
                 st.subheader(f':green[{pingcount}]')
             
             col13, col14, col15, col16 = st.columns(4)
 
             with col13:
                 st.header("preflight")
-                typeCountsDict = results["type_counts_dict"]
-                preflightcount = typeCountsDict['preflight']
+                typeCountsDict = results.get("type_counts_dict",{})
+                preflightcount = typeCountsDict.get('preflight',0)
                 st.subheader(f':green[{preflightcount}]')
             
             with col14:
@@ -202,14 +202,14 @@ if (uploaded_file is not None):
             
             with col15:
                 st.header("document")
-                typeCountsDict = results["type_counts_dict"]
-                documentcount = typeCountsDict['document']
+                typeCountsDict = results.get("type_counts_dict",{})
+                documentcount = typeCountsDict.get('document',0)
                 st.subheader(f':green[{documentcount}]')
             
             with col16:
                 st.header("font")
-                typeCountsDict = results["type_counts_dict"]
-                fontcount = typeCountsDict['font']
+                typeCountsDict = results.get("type_counts_dict",{})
+                fontcount = typeCountsDict.get('font',0)
                 st.subheader(f':green[{fontcount}]')
                     
             typeCountsDict = results["type_counts_dict"]
