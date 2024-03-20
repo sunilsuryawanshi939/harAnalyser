@@ -22,7 +22,10 @@ def filter_newserviceapis(df):
 
     Returns:
         A DataFrame containing the filtered rows.
+
+
     """
+    
     filtered_df = df[(df['1newserviceapi'] == 'Y') | (df['60newserviceapi'] == 'Y')]
     filtered_df = filtered_df[(df['isFetch'] == 'Y')]
 
@@ -157,7 +160,7 @@ def calculate_timing_stats(df):
 
     # Convert 'ttfb' and 'duration' columns to numeric, ignoring errors
     df['ttfb'] = pd.to_numeric(df['ttfb'], errors='coerce')
-    df['duration'] = pd.to_numeric(df['duration'], errors='coerce')
+    df['time'] = pd.to_numeric(df['time'], errors='coerce')
 
     # Calculate statistics for 'ttfb'
     ttfb_min = round(df['ttfb'].min(), 2)
@@ -169,46 +172,164 @@ def calculate_timing_stats(df):
     stats['ttfb_max'] = ttfb_max
 
     # Calculate statistics for 'duration'
-    duration_min = round(df['duration'].min(), 2)
-    duration_avg = round(df['duration'].mean(), 2)
-    duration_max = round(df['duration'].max(), 2)
+    time_min = round(df['time'].min(), 2)
+    time_avg = round(df['time'].mean(), 2)
+    time_max = round(df['time'].max(), 2)
 
-    stats['duration_min'] = duration_min
-    stats['duration_avg'] = duration_avg
-    stats['duration_max'] = duration_max
+    stats['time_min'] = time_min
+    stats['time_avg'] = time_avg
+    stats['time_max'] = time_max
 
     return stats
 
 
 
-def find_max_duration_row(http_df):
-    # Find row with maximum duration
-    max_duration_row = http_df.loc[http_df['duration'].idxmax()]
-    return max_duration_row
+def find_max_time_row(http_df):
+    # Find row with maximum time
+    max_time_row = http_df.loc[http_df['time'].idxmax()]
+    return max_time_row
 
 
-def calculate_interval_sum(http_df):
-    # Convert 'duration' column to float
-    http_df['duration'] = http_df['duration'].astype(float)
+# def calculate_interval_sum(http_df):
+#     """
+#     Calculates the total duration (in microseconds and seconds) of HTTP requests
+#     and records row IDs for rows included in the calculation, considering interval changes.
+
+#     Args:
+#         http_df (pandas.DataFrame): A DataFrame containing columns 'time', 'interval',
+#                                    'isTradingViewData', and 'rowid' (optional).
+
+#     Returns:
+#         tuple: A tuple containing three elements:
+#             - interval_sum_micros (float): Total duration in microseconds (rounded to 3 decimal places).
+#             - interval_sum_seconds (float): Total duration in seconds (rounded to 3 decimal places).
+#             - row_ids (list): List of row IDs for rows included in the calculation.
+#     """
+
+#     # Convert 'duration' column to float (assuming 'time' represents duration)
+#     http_df['time'] = http_df['time'].astype(float)
+
+#     # Initialize variables
+#     interval_sum_micros = 0
+#     interval_sum_seconds = 0
+#     counting = False
+#     current_interval = None
+#     row_ids = []
+
+#     # Iterate through the rows
+#     for i, row in http_df.iterrows():
+#         # Check for interval change or start of data
+#         if row['interval'] != current_interval and row['interval'] != 'N':
+#             counting = True  # Start summing for a new interval (except 'N')
+#             current_interval = row['interval']
+#             interval_sum_micros = 0  # Reset sum for the new interval
+#             row_ids.clear()  # Clear previously included row IDs
+
+#         if counting:
+#             interval_sum_micros += row['time']
+#             row_ids.append(row['rowid'])
+
+#         # Stop summing if encounter 'N' after a non-'N' interval
+#         if row['interval'] == 'N' and current_interval is not None:
+#             counting = False
+
+#     # Convert sum from microseconds to seconds and round to 3 decimal places
+#     interval_sum_seconds = round(interval_sum_micros / 1000, 3)
+#     interval_sum_micros = round(interval_sum_micros, 3)
+
+#     return interval_sum_micros, interval_sum_seconds, row_ids
+
+
+def calculate_rowid(http_df):
+  """
+  Finds the `row['id']` of the second instance where `row['isTradingViewData']` is 'Y'
+  and `row['interval']` is not 'N'.
+
+  Args:
+      http_df (pandas.DataFrame): A DataFrame containing columns 'id', 'time',
+                                   'interval', and 'isTradingViewData'.
+
+  Returns:
+      int: The `row['rowid']` of the second matching row, or None if not found.
+  """
+
+  # Initialize counter to track occurrences
+  count = 0
+  target_id = None
+
+  # Iterate through the rows
+  for i, row in http_df.iterrows():
+    if row['isTradingViewData'] == 'Y' and row['interval'] != 'N':
+      count += 1
+      if count == 2:
+        target_id = row['rowid']
+        break  # Stop iterating once the second instance is found
+
+  return target_id
+
+
+def calculate_first_load_time(http_df):
+    """
+    Calculates the following:
+    - Total duration (in microseconds) from the first row to the second instance
+      where `row['isTradingViewData']` is 'Y' and `row['interval']` is not 'N'.
+    - `row['rowid']` of that instance.
+    - Time taken for the first subsequent API call (in microseconds): This is the
+      sum of `row['time']` from the row after the target row (exclusive) to the
+      first row where `row['isTradingViewData']` is 'Y' (excluding the target row).
+
+    Args:
+        http_df (pandas.DataFrame): A DataFrame containing columns 'rowid', 'time',
+                                     'interval', and 'isTradingViewData'.
+
+    Returns:
+        tuple: A tuple containing five elements:
+            - total_time_combined (float): Combined total duration (microseconds, rounded to 3 decimal places).
+            - first_target_rowid (int): The `row['rowid']` of the second matching row for the first instance, or None if not found.
+            - second_target_rowid (int): The `row['rowid']` of the third matching row for the second instance, or None if not found.
+            - time_after_target (float): Time taken for the first subsequent API call (microseconds, rounded to 3 decimal places), excluding the time of the row with the second target ID.
+            - row_ids_used (dict): Dictionary containing the row IDs used for calculating `total_time_combined`.
+    """
 
     # Initialize variables
-    interval_sum_micros = 0
-    interval_sum_seconds = 0
-    counting = False
+    total_time_to_first_target = 0
+    total_time_to_second_target = 0
+    first_target_rowid = None
+    second_target_rowid = None
+    time_after_target = 0  # Renamed for clarity
+    row_ids_used = {}  # Dictionary to store row IDs used for calculating total_time_combined
 
-    # Iterate through the rows
-    for i, row in http_df.iterrows():
-        # Check if interval value changed from "N" to another value
-        if (row['interval'] != 'N' or row['isTradingViewData'] != 'N') and not counting:
-            counting = True  # Start summing if encounter first non-"N" interval
-            interval_sum_micros += row['duration']  # Include the current row's duration
-        elif (row['interval'] == 'N' and row['isTradingViewData'] == 'N') and counting:
-            counting = False  # Stop summing if encounter "N" after non-"N" interval
-        elif counting:
-            interval_sum_micros += row['duration']  # Include the current row's duration
+    # Efficiently locate target row using boolean indexing for the first instance
+    first_target_row = http_df[(http_df['isTradingViewData'] == 'Y') & (http_df['interval'] != 'N')]
+    if len(first_target_row) >= 2:
+        first_target_rowid = first_target_row.iloc[1]['rowid']  # Get row ID of the second matching row for the first instance
 
-    # Convert sum from microseconds to seconds and round to 3 decimal places
-    interval_sum_seconds = round(interval_sum_micros / 1000, 3)
-    interval_sum_micros = round(interval_sum_micros, 3)
+    # Efficiently locate target row using boolean indexing for the second instance
+    second_target_row = http_df[(http_df['isTradingViewData'] == 'Y') & (http_df['interval'] != 'N')].iloc[2:]
+    if not second_target_row.empty:
+        second_target_rowid = second_target_row.iloc[0]['rowid']  # Get row ID of the third matching row for the second instance
 
-    return interval_sum_micros, interval_sum_seconds
+    # Convert 'time' column to float before calculations
+    http_df['time'] = http_df['time'].astype(float)
+
+    # Calculate total time to the first target row ID (for the first instance)
+    if first_target_rowid is not None:
+        total_time_to_first_target = http_df.loc[http_df['rowid'] <= first_target_rowid, 'time'].sum()
+        row_ids_used['total_time_to_first_target'] = list(http_df.loc[http_df['rowid'] <= first_target_rowid, 'rowid'])
+
+    # Calculate time after target (if first_target_rowid exists) and locate the third instance (second target)
+    if first_target_rowid is not None and second_target_rowid is not None:
+        # Calculate total time to the second target row ID (for the second instance)
+        total_time_to_second_target = http_df.loc[(http_df['rowid'] > first_target_rowid) & (http_df['rowid'] <= second_target_rowid), 'time'].sum()
+        row_ids_used['total_time_to_second_target'] = list(http_df.loc[(http_df['rowid'] > first_target_rowid) & (http_df['rowid'] <= second_target_rowid), 'rowid'])
+
+        # Calculate time_after_target as the sum of time between the first and second target row IDs, excluding the time of the row with the second target ID
+        time_after_target = http_df.loc[(http_df['rowid'] > first_target_rowid) & (http_df['rowid'] < second_target_rowid), 'time'].sum()
+        row_ids_used['time_after_target'] = list(http_df.loc[(http_df['rowid'] > first_target_rowid) & (http_df['rowid'] < second_target_rowid), 'rowid'])
+
+    # Combine total times and round the result
+    total_time_combined = round(total_time_to_first_target + time_after_target, 3)
+
+    return total_time_combined, first_target_rowid, second_target_rowid, time_after_target, row_ids_used
+
+

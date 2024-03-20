@@ -272,26 +272,39 @@ if (uploaded_file is not None):
 
             col4, col5 ,col6 = st.columns(3)
             with col4:
-                st.header("Minimum Duration")
-                duration_min = timings_data['duration_min']
-                st.subheader(f':green[{duration_min}] ms')
+                st.header("Minimum Time")
+                time_min = timings_data['time_min']
+                st.subheader(f':green[{time_min}] ms')
             with col5:
-                st.header("Average Duration")
-                duration_avg = timings_data['duration_avg']
-                st.subheader(f':blue[{duration_avg}] ms')
+                st.header("Average Time")
+                time_avg = timings_data['time_avg']
+                st.subheader(f':blue[{time_avg}] ms')
             with col6:
-                st.header("Maximum Duration")
-                duration_max = timings_data['duration_max']
-                st.subheader(f':red[{duration_max}] ms')    
+                st.header("Maximum Time")
+                time_max = timings_data['time_max']
+                st.subheader(f':red[{time_max}] ms')    
 
 
-            # Calculate interval sum
-            interval_sum_micro, interval_sum_seconds = calculate.calculate_interval_sum(dat_clean)    
-            st.subheader(f"First time loading chart takes : :red[{interval_sum_micro} ms] OR :blue[{interval_sum_seconds} sec]")
+            # # Calculate interval sum
+            # interval_sum_micro, interval_sum_seconds ,included_row_ids= calculate.calculate_interval_sum(dat_clean)    
+            # st.subheader(f"First time loading chart takes : :red[{interval_sum_micro} ms] OR :blue[{interval_sum_seconds} sec]")
+            # st.subheader(f"Included row ids: :blue[{included_row_ids}]")
+
+
+            # Calculate the total time until the first successful tradingviewdata api call and all the css,images,js etc
+            total_time_combined, first_target_id, second_target_id, time_after_target, row_ids_used = calculate.calculate_first_load_time(dat_clean)
+            st.subheader(f"First load time (Loading js,css,font etc and first api call with tradingviewdata ): :red[{total_time_combined}] ms or :blue[{total_time_combined/1000}] sec")
+            st.subheader(f"Rowid - First instance where isTradingViewData exists : :blue[{first_target_id}]")
+            st.subheader(f"Rowid - Second instance where isTradingViewData exists : :blue[{second_target_id}]")
+            # st.subheader(f"Time between first and second instance : :blue[{time_after_target}] ms")
+            st.subheader(f"Row ids used for calculating the time  : :blue[{row_ids_used}]")
+
+            # Display the rowid
+            st.subheader("Row with second instance of interval change ")
+            st.subheader(calculate.calculate_rowid(dat_clean))  
 
             # Display the maximum duration row
-            st.subheader("Row with Maximum Duration: ")
-            st.dataframe(calculate.find_max_duration_row(filtered_newserviceapis_dataset))     
+            st.subheader("Row with Maximum Time: ")
+            st.dataframe(calculate.find_max_time_row(filtered_newserviceapis_dataset))     
 
-        
 
