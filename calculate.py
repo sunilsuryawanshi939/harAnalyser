@@ -271,23 +271,23 @@ def calculate_rowid(http_df):
 def calculate_first_load_time(http_df):
     """
     Calculates the following:
-    - Total duration (in microseconds) from the first row to the second instance
+    - Total duration (in milliseconds) from the first row to the second instance
       where `row['isTradingViewData']` is 'Y' and `row['interval']` is not 'N'.
     - `row['rowid']` of that instance.
-    - Time taken for the first subsequent API call (in microseconds): This is the
+    - Time taken for the first subsequent API call (in milliseconds): This is the
       sum of `row['time']` from the row after the target row (exclusive) to the
       first row where `row['isTradingViewData']` is 'Y' (excluding the target row).
 
     Args:
         http_df (pandas.DataFrame): A DataFrame containing columns 'rowid', 'time',
-                                     'interval', and 'isTradingViewData'.
+                                     'interval', 'isTradingViewData', and 'type'.
 
     Returns:
         tuple: A tuple containing five elements:
-            - total_time_combined (float): Combined total duration (microseconds, rounded to 3 decimal places).
+            - total_time_combined (float): Combined total duration (milliseconds, rounded to 3 decimal places).
             - first_target_rowid (int): The `row['rowid']` of the second matching row for the first instance, or None if not found.
             - second_target_rowid (int): The `row['rowid']` of the third matching row for the second instance, or None if not found.
-            - time_after_target (float): Time taken for the first subsequent API call (microseconds, rounded to 3 decimal places), excluding the time of the row with the second target ID.
+            - time_after_target (float): Time taken for the first subsequent API call (milliseconds, rounded to 3 decimal places), excluding the time of the row with the second target ID.
             - row_ids_used (dict): Dictionary containing the row IDs used for calculating `total_time_combined`.
     """
 
@@ -314,18 +314,23 @@ def calculate_first_load_time(http_df):
 
     # Calculate total time to the first target row ID (for the first instance)
     if first_target_rowid is not None:
-        total_time_to_first_target = http_df.loc[http_df['rowid'] <= first_target_rowid, 'time'].sum()
-        row_ids_used['total_time_to_first_target'] = list(http_df.loc[http_df['rowid'] <= first_target_rowid, 'rowid'])
+        total_time_to_first_target = 0
+        row_ids_used['total_time_to_first_target'] = []
+        for index, row in http_df.iterrows():
+            if row['type'] != 'websocket' and row['rowid'] <= first_target_rowid:
+                total_time_to_first_target += row['time']
+                row_ids_used['total_time_to_first_target'].append(row['rowid'])
+                # print(f"Row {row['rowid']} + Total Time: {total_time_to_first_target}")
 
     # Calculate time after target (if first_target_rowid exists) and locate the third instance (second target)
     if first_target_rowid is not None and second_target_rowid is not None:
-        # Calculate total time to the second target row ID (for the second instance)
-        total_time_to_second_target = http_df.loc[(http_df['rowid'] > first_target_rowid) & (http_df['rowid'] <= second_target_rowid), 'time'].sum()
-        row_ids_used['total_time_to_second_target'] = list(http_df.loc[(http_df['rowid'] > first_target_rowid) & (http_df['rowid'] <= second_target_rowid), 'rowid'])
-
-        # Calculate time_after_target as the sum of time between the first and second target row IDs, excluding the time of the row with the second target ID
-        time_after_target = http_df.loc[(http_df['rowid'] > first_target_rowid) & (http_df['rowid'] < second_target_rowid), 'time'].sum()
-        row_ids_used['time_after_target'] = list(http_df.loc[(http_df['rowid'] > first_target_rowid) & (http_df['rowid'] < second_target_rowid), 'rowid'])
+        time_after_target = 0
+        row_ids_used['time_after_target'] = []
+        for index, row in http_df.iterrows():
+            if row['type'] != 'websocket' and first_target_rowid < row['rowid'] < second_target_rowid:
+                time_after_target += row['time']
+                row_ids_used['time_after_target'].append(row['rowid'])
+                # print(f"Row {row['rowid']} + Time After Target: {time_after_target}")
 
     # Combine total times and round the result
     total_time_combined = round(total_time_to_first_target + time_after_target, 3)
